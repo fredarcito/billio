@@ -1,0 +1,47 @@
+import { NextResponse } from "next/server";
+
+import { getProfile, getSessionUser, saveProfile } from "@/lib/db";
+import { isValidEmail, jsonError, readJson } from "@/lib/api";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+// GET /api/profile — perfil del usuario autenticado
+export async function GET() {
+  const user = await getSessionUser();
+  if (!user) return jsonError("No autenticado", 401);
+
+  const profile = await getProfile(user.id);
+  return NextResponse.json({ profile: profile || null });
+}
+
+// PUT /api/profile — guarda los datos de facturación del usuario
+export async function PUT(request) {
+  const user = await getSessionUser();
+  if (!user) return jsonError("No autenticado", 401);
+
+  const body = await readJson(request);
+  const issuerName = String(body?.issuerName || "").trim();
+  const recipientEmail = String(body?.recipientEmail || "").trim().toLowerCase();
+  const amount = Number(body?.amount);
+  const currency = String(body?.currency || "").trim().toUpperCase();
+  const description = String(body?.description || "").trim();
+  const autoSend = Boolean(body?.autoSend);
+
+  if (!issuerName) return jsonError("El nombre del emisor es obligatorio");
+  if (!isValidEmail(recipientEmail)) return jsonError("El email del destinatario no es válido");
+  if (!Number.isFinite(amount) || amount <= 0) return jsonError("El importe debe ser mayor que 0");
+  if (!/^[A-Z]{3}$/.test(currency)) return jsonError("La moneda debe ser un código ISO de 3 letras");
+  if (!description) return jsonError("La descripción es obligatoria");
+
+  const profile = await saveProfile(user.id, {
+    issuerName,
+    recipientEmail,
+    amount: Math.round(amount * 100) / 100,
+    currency,
+    description,
+    autoSend,
+  });
+
+  return NextResponse.json({ profile });
+}

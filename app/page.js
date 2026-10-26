@@ -1,101 +1,97 @@
-import Image from "next/image";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { ArrowRight, CalendarClock, FileText, Mail, Zap } from "lucide-react";
 
-export default function Home() {
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { getSessionUser } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
+
+const features = [
+  {
+    icon: Zap,
+    title: "Emisión en un clic",
+    description:
+      "Elige el mes y pulsa «Generar y Enviar Factura». Billio usa tu perfil para crear el PDF y enviarlo.",
+  },
+  {
+    icon: CalendarClock,
+    title: "Envío automático mensual",
+    description:
+      "Un cron de Vercel emite y envía tus facturas el primer día de cada mes, sin duplicados.",
+  },
+  {
+    icon: FileText,
+    title: "Historial completo",
+    description:
+      "Consulta todas tus facturas, su estado de envío y descarga el PDF cuando lo necesites.",
+  },
+  {
+    icon: Mail,
+    title: "Entrega con Resend",
+    description:
+      "Correos profesionales con la factura en PDF adjunta, entregados por Resend.",
+  },
+];
+
+export default async function LandingPage() {
+  const user = await getSessionUser();
+  if (user) redirect("/dashboard");
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.js
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <main className="min-h-screen bg-gradient-to-b from-muted/60 to-background">
+      <header className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-6">
+        <div className="flex items-center gap-2 text-lg font-bold tracking-tight">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            B
+          </span>
+          Billio
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="ghost">
+            <Link href="/login">Iniciar sesión</Link>
+          </Button>
+          <Button asChild>
+            <Link href="/register">Crear cuenta</Link>
+          </Button>
+        </div>
+      </header>
+
+      <section className="mx-auto flex w-full max-w-6xl flex-col items-center px-6 py-20 text-center">
+        <span className="mb-4 rounded-full border bg-white px-3 py-1 text-xs font-medium text-muted-foreground">
+          Facturación ágil para autónomos y freelancers
+        </span>
+        <h1 className="max-w-3xl text-balance text-4xl font-bold tracking-tight sm:text-5xl">
+          Tus facturas mensuales, enviadas solas.
+        </h1>
+        <p className="mt-4 max-w-xl text-balance text-lg text-muted-foreground">
+          Configura tu perfil una vez y deja que Billio genere el PDF y lo envíe por email
+          cada mes. O emite una factura al instante con un solo clic.
+        </p>
+        <div className="mt-8 flex gap-3">
+          <Button asChild size="lg">
+            <Link href="/register">
+              Empezar gratis <ArrowRight />
+            </Link>
+          </Button>
+          <Button asChild size="lg" variant="outline">
+            <Link href="/login">Ya tengo cuenta</Link>
+          </Button>
+        </div>
+      </section>
+
+      <section className="mx-auto grid w-full max-w-6xl gap-4 px-6 pb-24 sm:grid-cols-2 lg:grid-cols-4">
+        {features.map(({ icon: Icon, title, description }) => (
+          <Card key={title}>
+            <CardContent className="p-6">
+              <Icon className="mb-4 h-6 w-6 text-primary" />
+              <h2 className="mb-1 font-semibold">{title}</h2>
+              <p className="text-sm text-muted-foreground">{description}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </section>
+    </main>
   );
 }
