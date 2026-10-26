@@ -24,7 +24,7 @@ import { formatMoney, monthName } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "Panel · Billio" };
+export const metadata = { title: "Dashboard · Billio" };
 
 // Tarjeta de métrica del panel
 function StatCard({ icon: Icon, label, value, hint, tone = "default" }) {

@@ -22,7 +22,7 @@ export default async function InvoicesPage() {
       </div>
       <InvoiceHistory
         invoices={invoices}
-        emptyMessage="Todavía no has emitido ninguna factura. Ve al panel para crear la primera."
+        emptyMessage="Emite tu primera factura desde el dashboard y aparecerá aquí, con su PDF y su estado de envío."
       />
     </div>
   );

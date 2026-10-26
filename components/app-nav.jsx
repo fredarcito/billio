@@ -2,16 +2,16 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { FileText, LayoutDashboard, LogOut, Settings } from "lucide-react";
+import { FileText, LayoutDashboard, LogOut, SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const links = [
-  { href: "/dashboard", label: "Panel", icon: LayoutDashboard },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/invoices", label: "Historial", icon: FileText },
-  { href: "/profile", label: "Perfil", icon: Settings },
+  { href: "/profile", label: "Facturación", icon: SlidersHorizontal },
 ];
 
 export function AppNav({ user }) {

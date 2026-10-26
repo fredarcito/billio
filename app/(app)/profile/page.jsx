@@ -5,7 +5,7 @@ import { getProfile, getSessionUser } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "Perfil · Billio" };
+export const metadata = { title: "Facturación · Billio" };
 
 export default async function ProfilePage() {
   const user = await getSessionUser();
@@ -15,7 +15,7 @@ export default async function ProfilePage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Perfil de facturación</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Datos de facturación</h1>
         <p className="text-muted-foreground">
           Estos datos se usan en cada factura que generes, manual o automáticamente.
         </p>

@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Ban, Download, Loader2, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, Ban, Download, FileText, Loader2, Plus, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -202,6 +203,33 @@ function DeleteDialog({ invoice, onClose, onDone }) {
   );
 }
 
+// Estado vacío: cuando todavía no hay ninguna factura emitida
+function EmptyState({ message }) {
+  return (
+    <Card className="overflow-hidden py-0">
+      <CardContent className="flex flex-col items-center gap-4 px-6 py-16 text-center">
+        <span className="relative flex size-16 items-center justify-center rounded-2xl border border-border bg-muted/50">
+          <FileText className="size-7 text-muted-foreground" strokeWidth={1.5} />
+          <span className="absolute -right-1.5 -top-1.5 flex size-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
+            <Plus className="size-3.5" strokeWidth={3} />
+          </span>
+        </span>
+        <div className="space-y-1.5">
+          <h3 className="text-base font-semibold">Todavía no hay facturas</h3>
+          <p className="mx-auto max-w-sm text-sm leading-relaxed text-muted-foreground">
+            {message}
+          </p>
+        </div>
+        <Button asChild className="mt-1">
+          <Link href="/dashboard">
+            Emitir la primera <ArrowRight />
+          </Link>
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 // Tabla de historial de facturas con acciones (anular / eliminar)
 export function InvoiceHistory({ invoices, emptyMessage = "No hay facturas todavía." }) {
   const router = useRouter();
@@ -221,13 +249,7 @@ export function InvoiceHistory({ invoices, emptyMessage = "No hay facturas todav
   }
 
   if (!invoices || invoices.length === 0) {
-    return (
-      <Card>
-        <CardContent className="py-12 text-center text-sm text-muted-foreground">
-          {emptyMessage}
-        </CardContent>
-      </Card>
-    );
+    return <EmptyState message={emptyMessage} />;
   }
 
   return (
@@ -264,6 +286,22 @@ export function InvoiceHistory({ invoices, emptyMessage = "No hay facturas todav
               </TableRow>
             </TableHeader>
             <TableBody>
+              {visible.length === 0 && (
+                <TableRow className="hover:bg-transparent">
+                  <TableCell colSpan={8} className="px-6 py-16 text-center">
+                    <div className="mx-auto flex max-w-sm flex-col items-center gap-2">
+                      <span className="flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                        <FileText className="size-5" />
+                      </span>
+                      <p className="text-sm font-medium">Solo tienes facturas anuladas</p>
+                      <p className="text-sm text-muted-foreground">
+                        Pulsa «Mostrar anuladas» para verlas, o emite una nueva desde el
+                        dashboard.
+                      </p>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
               {visible.map((invoice) => {
                 const status = statusMap[invoice.status] || {
                   label: invoice.status,
