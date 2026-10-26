@@ -200,7 +200,7 @@ export default async function DashboardPage() {
                   <CalendarClock className="mt-0.5 size-3.5 shrink-0" />
                   <span>
                     {profile.autoSend
-                      ? "El día 1 de cada mes se emite y envía automáticamente la factura del mes anterior."
+                      ? `Cada día ${profile.sendDay ?? 1} del mes se emite y envía la factura automáticamente.`
                       : "El envío automático está desactivado: emite cada factura a mano."}
                   </span>
                 </div>

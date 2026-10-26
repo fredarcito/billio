@@ -23,7 +23,7 @@ billio/
 ├── pnpm-workspace.yaml
 ├── postcss.config.mjs
 ├── tailwind.config.js
-├── vercel.json                      # cron "0 14 1 * *" -> /api/cron
+├── vercel.json                      # cron "0 14 * * *" -> /api/cron (daily)
 ├── app/
 │   ├── globals.css
 │   ├── layout.js                    # root layout + Toaster (Sonner)
@@ -47,7 +47,7 @@ billio/
 │       ├── invoices/preview/route.js   # POST draft PDF (no DB write)
 │       ├── invoices/[id]/route.js   # DELETE unsent / POST void sent
 │       ├── invoices/[id]/pdf/route.js  # GET PDF download
-│       └── cron/route.js            # GET monthly auto-send (Bearer CRON_SECRET)
+│       └── cron/route.js            # GET daily auto-send, per-account send day (Bearer CRON_SECRET)
 ├── components/
 │   ├── app-nav.jsx
 │   ├── auth-form.jsx
@@ -247,11 +247,20 @@ Google is the **only** sign-in method in the UI: `/login` shows a single "Inicia
 
 ```json
 {
-  "crons": [{ "path": "/api/cron", "schedule": "0 14 1 * *" }]
+  "crons": [{ "path": "/api/cron", "schedule": "0 14 * * *" }]
 }
 ```
 
-Vercel calls `/api/cron` on the 1st of every month at **14:00 UTC** with `Authorization: Bearer $CRON_SECRET`. The endpoint processes the current month for every user with `autoSend` enabled.
+Vercel calls `/api/cron` **every day at 14:00 UTC** with `Authorization: Bearer $CRON_SECRET`. Each profile stores its own `sendDay` (1–28); the endpoint only issues an invoice for accounts whose `sendDay` matches today's UTC day, and skips the rest as `not_today`.
+
+The billed period depends on `sendDay` (`periodForSendDay` in `lib/format.js`):
+
+| `sendDay` | Period billed |
+|---|---|
+| `1` | The current month |
+| `2`–`28` | The previous month |
+
+The day is capped at 28 so it exists in every month, including February.
 
 #### What the cron needs to work
 
@@ -268,7 +277,7 @@ All of these are required; if any is missing the run fails:
 #### Timing notes
 
 - `currentPeriod()` uses **UTC**, so the billed month is the UTC month at 14:00 on the 1st. That is correct for time zones from UTC-14 to UTC+10. If you ever move the schedule to 00:00 UTC, negative-offset zones would bill the previous month.
-- On the **Hobby** plan crons run at most once per day and may fire up to ~59 minutes late. `0 14 1 * *` fits that limit; the unique index makes a late or retried run harmless.
+- On the **Hobby** plan crons run at most once per day and may fire up to ~59 minutes late. `0 14 * * *` fits that limit; the unique index makes a late or retried run harmless.
 
 #### Diagnosing a cron run
 
@@ -281,6 +290,7 @@ All of these are required; if any is missing the run fails:
    - `processed: 0` → no profile has `auto_send = true`.
    - `failed` with `send_failed` → Resend key missing/invalid or the sender domain is not verified.
    - `skipped` with `already_issued` → expected: that period already has an active invoice.
+   - `not_today` → that account's `sendDay` is not today; nothing to do.
 
 ---
 

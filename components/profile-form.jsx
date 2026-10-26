@@ -35,7 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatMoney } from "@/lib/format";
+import { formatMoney, nextSendDate } from "@/lib/format";
 
 const CURRENCIES = ["EUR", "USD", "MXN", "ARS", "COP", "CLP", "PEN", "GBP", "BRL"];
 
@@ -77,6 +77,7 @@ export function ProfileForm({ initialProfile, userEmail }) {
     currency: initialProfile?.currency || "EUR",
     description: initialProfile?.description || "",
     autoSend: initialProfile?.autoSend ?? true,
+    sendDay: initialProfile?.sendDay ?? 1,
     replyToEmail: initialProfile?.replyToEmail || "",
   });
 
@@ -317,11 +318,39 @@ export function ProfileForm({ initialProfile, userEmail }) {
               <span className="space-y-1 text-sm">
                 <span className="block font-medium">Envío automático mensual</span>
                 <span className="block text-xs leading-relaxed text-muted-foreground">
-                  El primer día de cada mes Billio emite y envía la factura del mes anterior.
+                  Cada mes Billio emite y envía la factura sin que tengas que hacer nada.
                   Nunca se duplica: si ya existe una factura de ese periodo, se omite.
                 </span>
               </span>
             </label>
+
+            {form.autoSend && (
+              <div className="space-y-2">
+                <Label htmlFor="sendDay" className="text-sm">
+                  Día del mes
+                </Label>
+                <Select
+                  value={String(form.sendDay)}
+                  onValueChange={(value) => setForm((prev) => ({ ...prev, sendDay: Number(value) }))}
+                >
+                  <SelectTrigger id="sendDay">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 28 }, (_, index) => index + 1).map((day) => (
+                      <SelectItem key={day} value={String(day)}>
+                        Día {day}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FieldHint>
+                  {form.sendDay === 1
+                    ? "El día 1 se factura el mes en curso."
+                    : `El día ${form.sendDay} se factura el mes anterior. La próxima saldrá el ${nextSendDate(Number(form.sendDay)).toLocaleDateString("es-ES", { day: "numeric", month: "long", timeZone: "UTC" })}.`}
+                </FieldHint>
+              </div>
+            )}
           </section>
         </CardContent>
 

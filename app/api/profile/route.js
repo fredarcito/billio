@@ -27,6 +27,7 @@ export async function PUT(request) {
   const currency = String(body?.currency || "").trim().toUpperCase();
   const description = String(body?.description || "").trim();
   const autoSend = Boolean(body?.autoSend);
+  const sendDay = Number(body?.sendDay ?? 1);
   const replyToEmail = String(body?.replyToEmail || "").trim().toLowerCase();
   const recipientName = String(body?.recipientName || "").trim();
   const recipientTaxId = String(body?.recipientTaxId || "").trim();
@@ -36,6 +37,9 @@ export async function PUT(request) {
   if (!Number.isFinite(amount) || amount <= 0) return jsonError("El importe debe ser mayor que 0");
   if (!/^[A-Z]{3}$/.test(currency)) return jsonError("La moneda debe ser un código ISO de 3 letras");
   if (!description) return jsonError("La descripción es obligatoria");
+  if (!Number.isInteger(sendDay) || sendDay < 1 || sendDay > 28) {
+    return jsonError("El día de envío debe estar entre 1 y 28");
+  }
   // Opcional: si se deja vacío, las respuestas van al email de la cuenta
   if (replyToEmail && !isValidEmail(replyToEmail)) {
     return jsonError("El email de respuesta no es válido");
@@ -48,6 +52,7 @@ export async function PUT(request) {
     currency,
     description,
     autoSend,
+    sendDay,
     replyToEmail: replyToEmail || null,
     recipientName: recipientName || null,
     recipientTaxId: recipientTaxId || null,

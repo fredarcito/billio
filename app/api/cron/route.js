@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 
 import { getAutoSendUsers } from "@/lib/db";
 import { issueInvoice } from "@/lib/invoices";
-import { currentPeriod } from "@/lib/format";
+import { currentPeriod, periodForSendDay } from "@/lib/format";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-// GET /api/cron — envío automático mensual (Vercel Cron: "0 14 1 * *")
+// GET /api/cron — envío automático diario (Vercel Cron: "0 14 * * *")
+// Cada cuenta elige su día del mes (1-28); solo se factura a quien le toca hoy.
 // Requiere cabecera "Authorization: Bearer <CRON_SECRET>"
 export async function GET(request) {
   const secret = process.env.CRON_SECRET;
@@ -18,13 +19,21 @@ export async function GET(request) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  const { year, month } = currentPeriod();
+  const today = currentPeriod();
   // Solo las cuentas con envío automático activado (se leen con la clave secreta: no hay sesión)
   const accounts = await getAutoSendUsers();
 
   const results = [];
 
-  for (const { user } of accounts) {
+  for (const { user, profile } of accounts) {
+    // Cada cuenta tiene su día de envío: si hoy no es el suyo, se omite
+    if (Number(profile?.sendDay) !== today.day) {
+      results.push({ userId: user.id, status: "not_today", sendDay: profile?.sendDay ?? 1 });
+      continue;
+    }
+
+    const { year, month } = periodForSendDay(profile?.sendDay);
+
     try {
       const invoice = await issueInvoice({ user, year, month, source: "cron", admin: true });
       results.push({ userId: user.id, status: "sent", invoiceId: invoice.id, number: invoice.number });
@@ -41,11 +50,12 @@ export async function GET(request) {
   }
 
   const summary = {
-    period: { year, month },
-    processed: results.length,
+    today,
+    processed: results.filter((r) => r.status !== "not_today").length,
     sent: results.filter((r) => r.status === "sent").length,
     skipped: results.filter((r) => r.status === "skipped").length,
     failed: results.filter((r) => r.status === "failed").length,
+    notToday: results.filter((r) => r.status === "not_today").length,
     results,
   };
 
