@@ -26,7 +26,7 @@ export async function GET(request) {
 
   for (const { user } of accounts) {
     try {
-      const invoice = await issueInvoice({ user, year, month, source: "cron" });
+      const invoice = await issueInvoice({ user, year, month, source: "cron", admin: true });
       results.push({ userId: user.id, status: "sent", invoiceId: invoice.id, number: invoice.number });
     } catch (error) {
       // 409 = ya enviada en este periodo (idempotencia), no es un error real

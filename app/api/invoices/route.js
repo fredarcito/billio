@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getInvoices, getSessionUser } from "@/lib/db";
-import { issueInvoice } from "@/lib/invoices";
+import { buildInvoiceDraft, issueInvoice } from "@/lib/invoices";
 import { jsonError, readJson } from "@/lib/api";
 
 export const runtime = "nodejs";
@@ -16,7 +16,8 @@ export async function GET() {
   return NextResponse.json({ invoices });
 }
 
-// POST /api/invoices — emisión manual: { year, month }
+// POST /api/invoices — vista previa o emisión manual: { year, month, preview? }
+// Con preview: true devuelve el borrador sin guardar ni enviar nada.
 export async function POST(request) {
   const user = await getSessionUser();
   if (!user) return jsonError("No autenticado", 401);
@@ -33,6 +34,13 @@ export async function POST(request) {
   }
 
   try {
+    // Paso 1: vista previa (no toca la base de datos ni envía correo)
+    if (body?.preview) {
+      const draft = await buildInvoiceDraft({ user, year, month, source: "manual" });
+      return NextResponse.json({ draft });
+    }
+
+    // Paso 2: emisión y envío confirmados
     const invoice = await issueInvoice({ user, year, month, source: "manual" });
     return NextResponse.json({ invoice }, { status: 201 });
   } catch (error) {
