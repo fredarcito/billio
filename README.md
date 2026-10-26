@@ -31,7 +31,6 @@ billio/
 │   ├── icon.svg                     # favicon
 │   ├── apple-icon.jsx               # 180x180 Apple touch icon (ImageResponse)
 │   ├── login/page.jsx
-│   ├── register/page.jsx
 │   ├── auth/callback/route.js       # Google OAuth callback
 │   ├── (app)/
 │   │   ├── layout.js                # protected layout (redirects to /login)
@@ -39,7 +38,7 @@ billio/
 │   │   ├── invoices/page.jsx        # history
 │   │   └── profile/page.jsx         # billing profile
 │   └── api/
-│       ├── auth/register/route.js   # POST  sign up
+│       ├── auth/register/route.js   # POST  sign up (not exposed in the UI)
 │       ├── auth/login/route.js      # POST  sign in (session cookie)
 │       ├── auth/logout/route.js     # POST  sign out
 │       ├── auth/me/route.js         # GET   user + profile
@@ -240,7 +239,7 @@ Copy `.env.example` to `.env.local` and fill in the values:
 4. Copy the *Client ID* and *Client Secret* into Supabase: **Authentication → Providers → Google** → enable it, paste them and save.
 5. Under **Authentication → URL Configuration → Redirect URLs** add `http://localhost:3000/auth/callback` and `https://your-app.vercel.app/auth/callback`.
 
-The "Continue with Google" button appears on `/login` and `/register`; the callback lives in `app/auth/callback/route.js` and stores the session in cookies exactly like the email sign-in.
+Google is the **only** sign-in method in the UI: `/login` shows a single "Iniciar sesión con Google" button and there is no separate registration page — the account is created on first sign-in. The callback lives in `app/auth/callback/route.js` and stores the session in cookies. The email/password endpoints (`app/api/auth/register`, `app/api/auth/login`) still exist server-side, so the method can be re-enabled by adding the fields back to `components/auth-form.jsx`.
 
 ### 4.4 Cron
 
@@ -307,7 +306,7 @@ pnpm dev                     # http://localhost:3000
 
 Manual issuing walkthrough:
 
-1. Sign up at `/register`.
+1. Sign in with Google at `/login` (the account is created on first sign-in).
 2. At `/profile` fill in issuer, client email, amount, currency and concept, then save.
 3. At `/dashboard` pick the month, press **Generate and send invoice**, review the preview and confirm.
 4. Check the recipient inbox (or **Emails** in Resend) and the new row at `/invoices`.
@@ -344,7 +343,7 @@ Run it twice in a row: the second run must return `skipped` with `reason: "alrea
 ### Testing the other endpoints
 
 ```bash
-# Sign up (returns { signedIn: false } when Supabase requires email confirmation)
+# Sign up (not exposed in the UI; returns { signedIn: false } when Supabase requires email confirmation)
 curl -c cookies.txt -X POST http://localhost:3000/api/auth/register \
   -H 'content-type: application/json' \
   -d '{"name":"Ana","email":"ana@test.com","password":"password123"}'

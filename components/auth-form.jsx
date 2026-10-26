@@ -1,32 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
 import { supabaseBrowser } from "@/lib/supabase/browser";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
-// Formulario compartido para login y registro
-export function AuthForm({ mode = "login" }) {
-  const isRegister = mode === "register";
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
+// Acceso a Billio: solo con Google. No hay registro aparte, la cuenta se crea al entrar
+// la primera vez (el resto de métodos está oculto; el código de email sigue en app/api/auth).
+export function AuthForm() {
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
   const searchParams = useSearchParams();
 
   // Si el callback de Google falla, vuelve a /login?error=oauth
@@ -35,10 +21,6 @@ export function AuthForm({ mode = "login" }) {
       toast.error("No se pudo completar el acceso con Google. Inténtalo de nuevo.");
     }
   }, [searchParams]);
-
-  function update(field) {
-    return (event) => setForm((prev) => ({ ...prev, [field]: event.target.value }));
-  }
 
   // Login con Google: Supabase redirige a Google y vuelve a /auth/callback
   async function handleGoogle() {
@@ -59,134 +41,27 @@ export function AuthForm({ mode = "login" }) {
     }
   }
 
-  async function handleSubmit(event) {
-    event.preventDefault();
-    setLoading(true);
-
-    try {
-      const endpoint = isRegister ? "/api/auth/register" : "/api/auth/login";
-      const payload = isRegister
-        ? form
-        : { email: form.email, password: form.password };
-
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        throw new Error(data.error || "Ha ocurrido un error");
-      }
-
-      if (isRegister) {
-        // Supabase puede pedir confirmar el email: en ese caso todavía no hay sesión
-        if (!data.signedIn) {
-          toast.success("Cuenta creada. Revisa tu correo para confirmarla.");
-          router.push("/login");
-          return;
-        }
-        toast.success("¡Bienvenido a Billio!");
-      } else {
-        toast.success("Sesión iniciada");
-      }
-
-      router.push("/dashboard");
-      router.refresh();
-    } catch (error) {
-      toast.error(error.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   return (
-    <Card>
-      <form onSubmit={handleSubmit}>
-        <CardHeader>
-          <CardTitle className="text-xl">
-            {isRegister ? "Crea tu cuenta" : "Bienvenido de nuevo"}
-          </CardTitle>
-          <CardDescription>
-            {isRegister
-              ? "Empieza a enviar tus facturas en un clic."
-              : "Accede para gestionar tus facturas."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            onClick={handleGoogle}
-            disabled={googleLoading || loading}
-          >
-            {googleLoading ? <Loader2 className="animate-spin" /> : <GoogleIcon />}
-            Continuar con Google
-          </Button>
+    <div className="w-full">
+      <div className="mb-7 space-y-1.5">
+        <h1 className="text-xl font-semibold tracking-tight">Inicia sesión</h1>
+        <p className="text-sm text-black/50">Accede a tu panel para gestionar tus facturas.</p>
+      </div>
 
-          <div className="relative text-center text-xs text-muted-foreground">
-            <span className="relative z-10 bg-card px-2">o con tu email</span>
-            <span className="absolute inset-x-0 top-1/2 -z-0 border-t" />
-          </div>
+      <Button
+        type="button"
+        className="h-11 w-full gap-3 rounded-full text-sm font-medium shadow-[0_10px_30px_-10px_rgba(43,106,224,0.6)]"
+        onClick={handleGoogle}
+        disabled={googleLoading}
+      >
+        {googleLoading ? <Loader2 className="size-4 animate-spin" /> : <GoogleIcon />}
+        {googleLoading ? "Conectando con Google..." : "Iniciar sesión con Google"}
+      </Button>
 
-          {isRegister && (
-            <div className="space-y-2">
-              <Label htmlFor="name">Nombre</Label>
-              <Input
-                id="name"
-                autoComplete="name"
-                placeholder="Tu nombre"
-                value={form.name}
-                onChange={update("name")}
-                required
-              />
-            </div>
-          )}
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              placeholder="tu@email.com"
-              value={form.email}
-              onChange={update("email")}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Contraseña</Label>
-            <Input
-              id="password"
-              type="password"
-              autoComplete={isRegister ? "new-password" : "current-password"}
-              placeholder={isRegister ? "Mínimo 8 caracteres" : "••••••••"}
-              minLength={isRegister ? 8 : undefined}
-              value={form.password}
-              onChange={update("password")}
-              required
-            />
-          </div>
-        </CardContent>
-        <CardFooter className="flex flex-col gap-3">
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading && <Loader2 className="animate-spin" />}
-            {isRegister ? "Crear cuenta" : "Iniciar sesión"}
-          </Button>
-          <p className="text-center text-sm text-muted-foreground">
-            {isRegister ? "¿Ya tienes cuenta? " : "¿No tienes cuenta? "}
-            <Link
-              href={isRegister ? "/login" : "/register"}
-              className="font-medium text-primary hover:underline"
-            >
-              {isRegister ? "Inicia sesión" : "Regístrate"}
-            </Link>
-          </p>
-        </CardFooter>
-      </form>
-    </Card>
+      <p className="mt-5 text-xs leading-relaxed text-black/40">
+        Si es tu primera vez, tu cuenta se crea automáticamente con tu nombre y email de Google.
+      </p>
+    </div>
   );
 }
 
