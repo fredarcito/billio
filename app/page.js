@@ -23,7 +23,7 @@ const benefits = [
     icon: Zap,
     title: "Cobras antes",
     description:
-      "La factura sale el primer día del mes, no cuando te acuerdas. Menos días esperando y menos conversaciones incómodas para reclamar.",
+      "La factura sale el primer día del mes, no cuando te acuerdas. Y si cobras por horas, la tienes preparada esperando tu visto bueno.",
   },
   {
     icon: CalendarCheck,
@@ -46,11 +46,13 @@ const steps = [
   },
   {
     title: "Dinos qué facturas",
-    description: "Tus datos, los de tu cliente y el importe. Una sola vez, y nunca más.",
+    description:
+      "Tus datos, los de tu cliente y cómo cobras: importe fijo o por horas. Una sola vez, y nunca más.",
   },
   {
     title: "Cobra sin pensar en ello",
-    description: "Cada mes tu factura sale sola, en PDF y por email. Tú solo ves que el dinero entra.",
+    description:
+      "Cada mes tu factura sale sola, en PDF y por email. Si cobras por horas, Billio te deja el borrador listo y tú solo confirmas.",
   },
 ];
 
@@ -144,8 +146,8 @@ export default async function LandingPage({ searchParams }) {
           </h1>
 
           <p className="relative mx-auto mt-6 max-w-md text-[15px] leading-relaxed text-pretty text-black/55 sm:text-base">
-            Se acabó facturar a última hora. Tu factura sale sola el día que toca y tú
-            cobras sin haber pensado en ello.
+            Se acabó facturar a última hora. Tu factura sale sola el día que toca — o se
+            prepara sola para que solo tengas que confirmar las horas.
           </p>
 
           <div className="relative mt-8 flex justify-center">
