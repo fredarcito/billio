@@ -79,7 +79,12 @@ const floaters = [
   },
 ];
 
-export default async function LandingPage() {
+export default async function LandingPage({ searchParams }) {
+  // Si Supabase devuelve el login a la raíz (p. ej. porque el redirectTo no está en la lista
+  // permitida y usa el Site URL), el `code` llega aquí: se manda al callback para canjearlo.
+  const code = searchParams?.code;
+  if (code) redirect(`/auth/callback?code=${encodeURIComponent(code)}`);
+
   const user = await getSessionUser();
   if (user) redirect("/dashboard");
 
