@@ -4,7 +4,16 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
-import { ArrowRight, Ban, Download, FileText, Loader2, Plus, Trash2 } from "lucide-react";
+import {
+  ArrowRight,
+  Ban,
+  Download,
+  FileText,
+  Loader2,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,6 +39,7 @@ import {
 import { formatDate, formatMoney, monthName } from "@/lib/format";
 
 const statusMap = {
+  draft: { label: "Borrador", variant: "warning" },
   sent: { label: "Enviada", variant: "success" },
   pending: { label: "Pendiente", variant: "warning" },
   failed: { label: "Fallida", variant: "destructive" },
@@ -163,7 +173,7 @@ function DeleteDialog({ invoice, onClose, onDone }) {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "No se pudo borrar la factura");
 
-      toast.success("Factura eliminada");
+      toast.success(invoice.status === "draft" ? "Borrador descartado" : "Factura eliminada");
       onDone();
     } catch (error) {
       toast.error(error.message);
@@ -179,10 +189,13 @@ function DeleteDialog({ invoice, onClose, onDone }) {
           <DialogIcon icon={Trash2} />
 
           <DialogHeader className="gap-1.5">
-            <DialogTitle className="text-base">Eliminar factura</DialogTitle>
+            <DialogTitle className="text-base">
+              {invoice.status === "draft" ? "Descartar borrador" : "Eliminar factura"}
+            </DialogTitle>
             <DialogDescription className="leading-relaxed">
-              Esta factura nunca se envió, así que se borra definitivamente y el periodo queda
-              libre. Esta acción no se puede deshacer.
+              {invoice.status === "draft"
+                ? "El borrador se borra definitivamente y el periodo queda libre para crear otro. El cliente nunca lo recibió."
+                : "Esta factura nunca se envió, así que se borra definitivamente y el periodo queda libre. Esta acción no se puede deshacer."}
             </DialogDescription>
           </DialogHeader>
 
@@ -308,7 +321,10 @@ export function InvoiceHistory({ invoices, emptyMessage = "No hay facturas todav
                   variant: "outline",
                 };
                 const cancelled = invoice.status === "cancelled";
-                const canDelete = invoice.status === "pending" || invoice.status === "failed";
+                const canDelete =
+                  invoice.status === "pending" ||
+                  invoice.status === "failed" ||
+                  invoice.status === "draft";
 
                 return (
                   <TableRow key={invoice.id} className={cancelled ? "opacity-60" : undefined}>
@@ -352,6 +368,14 @@ export function InvoiceHistory({ invoices, emptyMessage = "No hay facturas todav
                             <span className="sr-only">Descargar PDF</span>
                           </a>
                         </Button>
+                        {invoice.status === "draft" && (
+                          <Button asChild variant="ghost" size="icon" title="Editar borrador">
+                            <Link href={`/invoices/draft/${invoice.id}`}>
+                              <Pencil />
+                              <span className="sr-only">Editar borrador</span>
+                            </Link>
+                          </Button>
+                        )}
                         {invoice.status === "sent" && (
                           <Button
                             variant="ghost"

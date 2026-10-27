@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getAutoSendUsers } from "@/lib/db";
-import { issueInvoice } from "@/lib/invoices";
+import { createDraft, issueInvoice } from "@/lib/invoices";
 import { currentPeriod, periodForSendDay } from "@/lib/format";
 
 export const runtime = "nodejs";
@@ -35,6 +35,25 @@ export async function GET(request) {
     const { year, month } = periodForSendDay(profile?.sendDay);
 
     try {
+      // Por horas el importe cambia cada mes: no se puede enviar sin revisar. Se crea un
+      // borrador con las horas a 0 y la persona lo completa y confirma.
+      if (profile?.billingMode === "hourly") {
+        const { invoice, created } = await createDraft({
+          user,
+          year,
+          month,
+          source: "cron",
+          admin: true,
+        });
+        results.push({
+          userId: user.id,
+          status: created ? "drafted" : "skipped",
+          invoiceId: invoice?.id,
+          number: invoice?.number,
+        });
+        continue;
+      }
+
       const invoice = await issueInvoice({ user, year, month, source: "cron", admin: true });
       results.push({ userId: user.id, status: "sent", invoiceId: invoice.id, number: invoice.number });
     } catch (error) {
@@ -53,6 +72,7 @@ export async function GET(request) {
     today,
     processed: results.filter((r) => r.status !== "not_today").length,
     sent: results.filter((r) => r.status === "sent").length,
+    drafted: results.filter((r) => r.status === "drafted").length,
     skipped: results.filter((r) => r.status === "skipped").length,
     failed: results.filter((r) => r.status === "failed").length,
     notToday: results.filter((r) => r.status === "not_today").length,

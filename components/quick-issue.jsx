@@ -69,6 +69,12 @@ export function QuickIssue({ profile }) {
         throw new Error(data.error || "No se pudo preparar la factura");
       }
 
+      // Modo por horas: el servidor crea el borrador y se edita en su propia pantalla
+      if (data?.draft === true && data?.invoice?.id) {
+        router.push(`/invoices/draft/${data.invoice.id}`);
+        return;
+      }
+
       setDraft(data.draft);
       setPreviewOpen(true);
     } catch (error) {
@@ -86,7 +92,9 @@ export function QuickIssue({ profile }) {
           Emitir factura
         </CardTitle>
         <CardDescription>
-          Selecciona el mes. Billio usará los datos de tu perfil para generar el PDF y enviarlo.
+          {profile.billingMode === "hourly"
+            ? "Selecciona el mes. Billio creará un borrador para que pongas las horas y lo confirmes."
+            : "Selecciona el mes. Billio usará los datos de tu perfil para generar el PDF y enviarlo."}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6 py-6">
@@ -129,8 +137,14 @@ export function QuickIssue({ profile }) {
               </div>
             </div>
             <div>
-              <div className="text-muted-foreground">Importe</div>
-              <div className="font-medium">{formatMoney(profile.amount, profile.currency)}</div>
+              <div className="text-muted-foreground">
+                {profile.billingMode === "hourly" ? "Tarifa" : "Importe"}
+              </div>
+              <div className="font-medium">
+                {profile.billingMode === "hourly"
+                  ? `${formatMoney(profile.hourlyRate, profile.currency)} / ${profile.hourlyUnit}`
+                  : formatMoney(profile.amount, profile.currency)}
+              </div>
             </div>
             <div>
               <div className="text-muted-foreground">Concepto</div>
@@ -142,7 +156,11 @@ export function QuickIssue({ profile }) {
       <CardFooter className="border-t bg-muted/40 py-4">
         <Button size="lg" className="w-full" onClick={handlePreview} disabled={loading}>
           {loading ? <Loader2 className="animate-spin" /> : <Eye />}
-          {loading ? "Preparando factura..." : "Revisar y enviar factura"}
+          {loading
+            ? "Preparando factura..."
+            : profile.billingMode === "hourly"
+              ? "Preparar borrador"
+              : "Revisar y enviar factura"}
         </Button>
       </CardFooter>
 

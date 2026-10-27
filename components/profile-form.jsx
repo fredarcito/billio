@@ -79,7 +79,12 @@ export function ProfileForm({ initialProfile, userEmail }) {
     autoSend: initialProfile?.autoSend ?? true,
     sendDay: initialProfile?.sendDay ?? 1,
     replyToEmail: initialProfile?.replyToEmail || "",
+    billingMode: initialProfile?.billingMode || "fixed",
+    hourlyRate: initialProfile?.hourlyRate ?? "",
+    hourlyUnit: initialProfile?.hourlyUnit || "h",
   });
+
+  const hourly = form.billingMode === "hourly";
 
   const replyTo = form.replyToEmail || userEmail;
   const amountValue = Number(form.amount);
@@ -100,7 +105,11 @@ export function ProfileForm({ initialProfile, userEmail }) {
       const res = await fetch("/api/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, amount: Number(form.amount) }),
+        body: JSON.stringify({
+          ...form,
+          amount: Number(form.amount),
+          hourlyRate: Number(form.hourlyRate),
+        }),
       });
       const data = await res.json().catch(() => ({}));
 
@@ -129,6 +138,60 @@ export function ProfileForm({ initialProfile, userEmail }) {
         </CardHeader>
 
         <CardContent className="space-y-8 py-6">
+          {/* --- Modo de facturación: lo primero, porque decide qué campos importan --- */}
+          <section className="space-y-3">
+            <SectionTitle
+              icon={Wallet}
+              title="Modo de facturación"
+              description="Cómo calculas lo que facturas cada mes."
+            />
+            <div className="grid gap-3 sm:grid-cols-2">
+              {[
+                {
+                  value: "fixed",
+                  title: "Importe fijo",
+                  hint: "Siempre el mismo importe cada mes.",
+                },
+                {
+                  value: "hourly",
+                  title: "Por horas",
+                  hint: "Cambia cada mes según las horas.",
+                },
+              ].map((option) => {
+                const selected = form.billingMode === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setForm((prev) => ({ ...prev, billingMode: option.value }))}
+                    className={`rounded-lg border p-4 text-left transition-colors ${
+                      selected
+                        ? "border-primary bg-primary/5 ring-1 ring-primary"
+                        : "hover:bg-muted/50"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2 text-sm font-medium">
+                      <span
+                        className={`flex size-4 items-center justify-center rounded-full border ${
+                          selected ? "border-primary" : "border-muted-foreground/40"
+                        }`}
+                      >
+                        {selected && <span className="size-2 rounded-full bg-primary" />}
+                      </span>
+                      {option.title}
+                    </span>
+                    <span className="mt-1 block pl-6 text-xs text-muted-foreground">
+                      {option.hint}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+          </section>
+
+          <Separator />
+
           {/* --- Emisor --- */}
           <section className="space-y-4">
             <SectionTitle
@@ -188,40 +251,37 @@ export function ProfileForm({ initialProfile, userEmail }) {
               obligatorios en una factura real, pero puedes completarlos más tarde.
             </FieldHint>
 
-            <div className="space-y-2">
-              <Label htmlFor="recipientEmail">Email del cliente</Label>
-              <Input
-                id="recipientEmail"
-                type="email"
-                placeholder="cliente@empresa.com"
-                value={form.recipientEmail}
-                onChange={update("recipientEmail")}
-                required
-              />
-              <FieldHint>
-                Recibirá el correo con el PDF adjunto. Puedes cambiarlo antes de cada envío
-                manual.
-              </FieldHint>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="recipientEmail">Email del cliente</Label>
+                <Input
+                  id="recipientEmail"
+                  type="email"
+                  placeholder="cliente@empresa.com"
+                  value={form.recipientEmail}
+                  onChange={update("recipientEmail")}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="replyToEmail">
+                  Email para respuestas
+                  <span className="ml-2 font-normal text-muted-foreground">(opcional)</span>
+                </Label>
+                <Input
+                  id="replyToEmail"
+                  type="email"
+                  placeholder={userEmail}
+                  value={form.replyToEmail}
+                  onChange={update("replyToEmail")}
+                />
+              </div>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="replyToEmail">
-                Email para respuestas
-                <span className="ml-2 font-normal text-muted-foreground">(opcional)</span>
-              </Label>
-              <Input
-                id="replyToEmail"
-                type="email"
-                placeholder={userEmail}
-                value={form.replyToEmail}
-                onChange={update("replyToEmail")}
-              />
-              <FieldHint>
-                Si tu cliente pulsa «Responder», el mensaje llega a{" "}
-                <span className="font-medium text-foreground">{replyTo}</span>. El correo
-                siempre se envía desde el dominio de Billio para que no acabe en spam.
-              </FieldHint>
-            </div>
+            <FieldHint>
+              El cliente recibe el PDF en su email; si pulsa «Responder», el mensaje llega a{" "}
+              <span className="font-medium text-foreground">{replyTo}</span>. El correo siempre
+              se envía desde el dominio de Billio para que no acabe en spam.
+            </FieldHint>
           </section>
 
           <Separator />
@@ -231,21 +291,37 @@ export function ProfileForm({ initialProfile, userEmail }) {
             <SectionTitle
               icon={Wallet}
               title="Importe"
-              description="El valor que se factura cada mes."
+              description={hourly ? "Tarifa por hora y moneda." : "Importe mensual y moneda."}
             />
-            <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
+
+            <div className="grid gap-4 sm:grid-cols-[1fr_1fr_auto]">
               <div className="space-y-2">
-                <Label htmlFor="amount">Valor mensual por defecto</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  placeholder="1200.00"
-                  value={form.amount}
-                  onChange={update("amount")}
-                  required
-                />
+                <Label htmlFor={hourly ? "hourlyRate" : "amount"}>
+                  {hourly ? "Tarifa por hora" : "Valor mensual por defecto"}
+                </Label>
+                {hourly ? (
+                  <Input
+                    id="hourlyRate"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    placeholder="50.00"
+                    value={form.hourlyRate}
+                    onChange={update("hourlyRate")}
+                    required
+                  />
+                ) : (
+                  <Input
+                    id="amount"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    placeholder="1200.00"
+                    value={form.amount}
+                    onChange={update("amount")}
+                    required
+                  />
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="currency">Moneda</Label>
@@ -253,7 +329,7 @@ export function ProfileForm({ initialProfile, userEmail }) {
                   value={form.currency}
                   onValueChange={(value) => setForm((prev) => ({ ...prev, currency: value }))}
                 >
-                  <SelectTrigger id="currency" className="sm:w-28">
+                  <SelectTrigger id="currency">
                     <SelectValue placeholder="Moneda" />
                   </SelectTrigger>
                   <SelectContent>
@@ -265,11 +341,27 @@ export function ProfileForm({ initialProfile, userEmail }) {
                   </SelectContent>
                 </Select>
               </div>
+              {hourly && (
+                <div className="space-y-2">
+                  <Label htmlFor="hourlyUnit">Unidad</Label>
+                  <Input
+                    id="hourlyUnit"
+                    className="sm:w-24"
+                    maxLength={10}
+                    placeholder="h"
+                    value={form.hourlyUnit}
+                    onChange={update("hourlyUnit")}
+                  />
+                </div>
+              )}
             </div>
+
             <FieldHint>
-              {amountPreview
-                ? `Se facturarán ${amountPreview} al mes.`
-                : "Introduce un importe mayor que 0."}
+              {hourly
+                ? "Cada mes se crea un borrador con tus horas. Tú lo revisas y lo envías: el envío automático no factura sin tu confirmación."
+                : amountPreview
+                  ? `Se facturarán ${amountPreview} al mes.`
+                  : "Introduce un importe mayor que 0."}
             </FieldHint>
           </section>
 
@@ -318,8 +410,9 @@ export function ProfileForm({ initialProfile, userEmail }) {
               <span className="space-y-1 text-sm">
                 <span className="block font-medium">Envío automático mensual</span>
                 <span className="block text-xs leading-relaxed text-muted-foreground">
-                  Cada mes Billio emite y envía la factura sin que tengas que hacer nada.
-                  Nunca se duplica: si ya existe una factura de ese periodo, se omite.
+                  {hourly
+                    ? "Cada mes Billio prepara un borrador con tus horas y te avisa. La factura no se envía hasta que la confirmes."
+                    : "Cada mes Billio emite y envía la factura sin que tengas que hacer nada. Nunca se duplica: si ya existe una factura de ese periodo, se omite."}
                 </span>
               </span>
             </label>

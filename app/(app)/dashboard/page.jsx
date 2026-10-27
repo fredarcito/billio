@@ -66,6 +66,8 @@ export default async function DashboardPage() {
   const currentMonthInvoice = sent.find(
     (inv) => inv.year === currentYear && inv.month === currentMonth
   );
+  // Borradores pendientes de confirmar (facturación por horas): se pueden editar y enviar
+  const drafts = invoices.filter((inv) => inv.status === "draft");
   const firstName = user.name.split(" ")[0];
 
   return (
@@ -130,11 +132,19 @@ export default async function DashboardPage() {
             <StatCard
               icon={CalendarDays}
               label={`Factura de ${monthName(currentMonth)}`}
-              value={currentMonthInvoice ? "Emitida" : "Pendiente"}
+              value={
+                currentMonthInvoice
+                  ? "Emitida"
+                  : drafts.some((inv) => inv.year === currentYear && inv.month === currentMonth)
+                    ? "Borrador"
+                    : "Pendiente"
+              }
               hint={
                 currentMonthInvoice
                   ? `Enviada a ${currentMonthInvoice.recipientEmail}`
-                  : "Aún no la has enviado este mes"
+                  : drafts.some((inv) => inv.year === currentYear && inv.month === currentMonth)
+                    ? "Revisa las horas y confírmala"
+                    : "Aún no la has enviado este mes"
               }
             />
             <StatCard
@@ -148,6 +158,36 @@ export default async function DashboardPage() {
               hint={profile.recipientName ? profile.recipientEmail : "Sin nombre en la factura"}
             />
           </div>
+
+          {/* Borradores pendientes de confirmar */}
+          {drafts.length > 0 && (
+            <Card className="gap-0 border-amber-200 bg-amber-50/60 py-0 dark:border-amber-900 dark:bg-amber-950/30">
+              <CardContent className="flex flex-wrap items-center justify-between gap-4 p-5">
+                <div className="flex items-start gap-3">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                    <FileText className="size-4" />
+                  </span>
+                  <div className="space-y-0.5">
+                    <div className="text-sm font-medium">
+                      {drafts.length === 1
+                        ? "Tienes un borrador pendiente de confirmar"
+                        : `Tienes ${drafts.length} borradores pendientes de confirmar`}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {monthName(drafts[0].month)} {drafts[0].year} ·{" "}
+                      {formatMoney(drafts[0].amount, drafts[0].currency)}. Revisa las horas y
+                      envíala cuando esté lista.
+                    </div>
+                  </div>
+                </div>
+                <Button asChild size="sm">
+                  <Link href={`/invoices/draft/${drafts[0].id}`}>
+                    Revisar y enviar <ArrowRight />
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Emisión + resumen del perfil */}
           <div className="grid gap-6 lg:grid-cols-3">
@@ -181,9 +221,13 @@ export default async function DashboardPage() {
                     </dd>
                   </div>
                   <div className="flex items-start justify-between gap-4">
-                    <dt className="text-muted-foreground">Importe</dt>
+                    <dt className="text-muted-foreground">
+                      {profile.billingMode === "hourly" ? "Tarifa" : "Importe"}
+                    </dt>
                     <dd className="text-right font-medium tabular-nums">
-                      {formatMoney(profile.amount, profile.currency)}
+                      {profile.billingMode === "hourly"
+                        ? `${formatMoney(profile.hourlyRate, profile.currency)} / ${profile.hourlyUnit}`
+                        : formatMoney(profile.amount, profile.currency)}
                     </dd>
                   </div>
                   <div className="flex items-start justify-between gap-4">
@@ -199,9 +243,11 @@ export default async function DashboardPage() {
                 <div className="flex items-start gap-2.5 rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
                   <CalendarClock className="mt-0.5 size-3.5 shrink-0" />
                   <span>
-                    {profile.autoSend
-                      ? `Cada día ${profile.sendDay ?? 1} del mes se emite y envía la factura automáticamente.`
-                      : "El envío automático está desactivado: emite cada factura a mano."}
+                    {!profile.autoSend
+                      ? "El envío automático está desactivado: emite cada factura a mano."
+                      : profile.billingMode === "hourly"
+                        ? `Cada día ${profile.sendDay ?? 1} del mes se prepara un borrador con tus horas. La factura se envía cuando la confirmas.`
+                        : `Cada día ${profile.sendDay ?? 1} del mes se emite y envía la factura automáticamente.`}
                   </span>
                 </div>
 

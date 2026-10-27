@@ -31,10 +31,21 @@ export async function PUT(request) {
   const replyToEmail = String(body?.replyToEmail || "").trim().toLowerCase();
   const recipientName = String(body?.recipientName || "").trim();
   const recipientTaxId = String(body?.recipientTaxId || "").trim();
+  const billingMode = body?.billingMode === "hourly" ? "hourly" : "fixed";
+  // La tarifa puede llegar como "" (campo vacío) o null: Number("") es 0, así que se distingue
+  const rawRate = body?.hourlyRate;
+  const hourlyRate = rawRate === "" || rawRate === null || rawRate === undefined ? NaN : Number(rawRate);
+  const hourlyUnit = String(body?.hourlyUnit || "h").trim().slice(0, 10) || "h";
 
   if (!issuerName) return jsonError("El nombre del emisor es obligatorio");
   if (!isValidEmail(recipientEmail)) return jsonError("El email del destinatario no es válido");
-  if (!Number.isFinite(amount) || amount <= 0) return jsonError("El importe debe ser mayor que 0");
+  // En modo por horas el importe fijo no se usa: lo pone cada factura al confirmar el borrador
+  if (billingMode === "fixed" && (!Number.isFinite(amount) || amount <= 0)) {
+    return jsonError("El importe debe ser mayor que 0");
+  }
+  if (billingMode === "hourly" && (!Number.isFinite(hourlyRate) || hourlyRate <= 0)) {
+    return jsonError("La tarifa por hora debe ser mayor que 0");
+  }
   if (!/^[A-Z]{3}$/.test(currency)) return jsonError("La moneda debe ser un código ISO de 3 letras");
   if (!description) return jsonError("La descripción es obligatoria");
   if (!Number.isInteger(sendDay) || sendDay < 1 || sendDay > 28) {
@@ -45,10 +56,22 @@ export async function PUT(request) {
     return jsonError("El email de respuesta no es válido");
   }
 
+  // En modo por horas el importe se conserva (si lo había) en vez de ponerlo a 0: así volver a
+  // "importe fijo" no obliga a escribirlo otra vez. Solo cuenta `hourly_rate`.
+  const existing = billingMode === "hourly" ? await getProfile(user.id) : null;
+
   const profile = await saveProfile(user.id, {
     issuerName,
     recipientEmail,
-    amount: Math.round(amount * 100) / 100,
+    amount:
+      billingMode === "fixed"
+        ? Math.round(amount * 100) / 100
+        : existing?.amount > 0
+          ? existing.amount
+          : 0,
+    billingMode,
+    hourlyRate: billingMode === "hourly" ? Math.round(hourlyRate * 100) / 100 : null,
+    hourlyUnit,
     currency,
     description,
     autoSend,

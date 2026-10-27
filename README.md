@@ -97,8 +97,9 @@ Two tables in `public`, one row per account and one per invoice (see the migrati
 
 | Table | Contents |
 |---|---|
-| `profiles` | Billing data per account: issuer, client (`recipient_name`, `recipient_tax_id`, `recipient_email`), amount, currency, concept, `auto_send` and optional `reply_to_email`. `user_id` is the primary key. |
-| `invoices` | Issued invoices: period, client (name, tax ID and email), amount, source (`manual`/`cron`), status (`pending`/`sent`/`failed`/`cancelled`), `resend_id`, `reply_to_email`, cancellation (`cancelled_at`, `cancel_reason`, `replaces_id`) and timestamps. |
+| `profiles` | Billing data per account: issuer, client (`recipient_name`, `recipient_tax_id`, `recipient_email`), amount, currency, concept, `auto_send`, optional `reply_to_email`, and the billing mode (`billing_mode` `fixed`/`hourly`, `hourly_rate`, `hourly_unit`). `user_id` is the primary key. |
+| `invoices` | Invoices: period, client (name, tax ID and email), amount, source (`manual`/`cron`), status (`draft`/`pending`/`sent`/`failed`/`cancelled`), `subtotal`, `resend_id`, `reply_to_email`, cancellation (`cancelled_at`, `cancel_reason`, `replaces_id`) and timestamps. |
+| `invoice_items` | Invoice lines: `description`, `quantity`, `unit_price`, `amount` (quantity × price) and `position`. One row per concept; invoices without lines keep using the single `description` + `amount`. |
 
 Users live in **Supabase Auth** (`auth.users`); both tables reference it with `on delete cascade`.
 
@@ -120,6 +121,32 @@ Manual issuing is a two-step flow to avoid mistakes:
 2. **Confirm**: `POST /api/invoices` with `{ year, month }` issues, sends and records the invoice.
 
 The cron skips the preview and issues directly.
+
+### Billing by the hour
+
+An account bills either a **fixed amount** every month or **by the hour**. The mode lives in `profiles.billing_mode`:
+
+- **`fixed`** (default): unchanged behaviour. The cron issues and sends the invoice on the send day.
+- **`hourly`**: the amount changes every month, so nothing can be sent without review. On the send day the cron creates a **draft** (`status = 'draft'`) with the profile concept at 0 hours and the profile rate. The person opens `/invoices/draft/[id]`, sets the hours, and confirms.
+
+Drafts are edited through:
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /api/invoices/drafts/[id]` | Draft with its lines. |
+| `PUT /api/invoices/drafts/[id]` | Saves `{ items: [{ description, quantity, unitPrice }] }`. |
+| `POST /api/invoices/drafts/[id]/send` | Saves the lines, renders the PDF and sends the email. |
+| `DELETE /api/invoices/drafts/[id]` | Discards the draft and frees the period. |
+
+Rules that the server enforces (never the client):
+
+- The **total is always recomputed** from the lines (`quantity × unit_price`, rounded to cents). Any `amount` sent by the client is ignored.
+- At least one line with a description and `quantity > 0` is required, and the total must be greater than 0.
+- If the email fails, the invoice goes **back to `draft`** with the error stored, so it can be fixed and retried. Nothing is lost.
+- A draft occupies the period through the same unique index, so the cron cannot create a second one.
+- Manual issuing (`POST /api/invoices`) in hourly mode creates the draft and returns it instead of sending.
+
+The PDF and the email list one row per concept (concept, quantity × price, amount) when the invoice has lines; invoices without lines keep the original single-concept layout.
 
 ### Voiding and deleting invoices
 
