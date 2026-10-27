@@ -29,7 +29,9 @@ export function AuthForm() {
       const { error } = await supabaseBrowser().auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          // El host desde el que se entra manda (así staging y producción no se pisan);
+          // NEXT_PUBLIC_APP_URL solo es el respaldo si el navegador no da un origen válido.
+          redirectTo: `${window.location.origin || process.env.NEXT_PUBLIC_APP_URL?.replace(/\/+$/, "")}/auth/callback`,
           queryParams: { prompt: "select_account" },
         },
       });

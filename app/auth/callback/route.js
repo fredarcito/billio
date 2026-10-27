@@ -3,12 +3,14 @@
 import { NextResponse } from "next/server";
 
 import { supabaseServer } from "@/lib/supabase/server";
+import { appOrigin } from "@/lib/url";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
+  const origin = appOrigin(request);
   const code = searchParams.get("code");
   // Solo rutas internas (evita redirecciones abiertas)
   const nextParam = searchParams.get("next") || "/dashboard";

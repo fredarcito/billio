@@ -204,6 +204,7 @@ Copy `.env.example` to `.env.local` and fill in the values:
 | `RESEND_API_KEY` | Resend API key (`re_...`). |
 | `RESEND_FROM` | Sender on a domain verified in Resend (e.g. `Billio <facturas@lowfly.travel>`). For testing: `Billio <onboarding@resend.dev>`. |
 | `CRON_SECRET` | Cron secret. Vercel sends `Authorization: Bearer $CRON_SECRET` automatically. |
+| `NEXT_PUBLIC_APP_URL` | Public URL of the app (e.g. `https://your-app.vercel.app`, no trailing slash). Fallback only: the app always returns people to the host they came from. Optional in local dev. |
 
 ---
 
@@ -228,7 +229,9 @@ Copy `.env.example` to `.env.local` and fill in the values:
    Or paste each file from `supabase/migrations/` into the dashboard **SQL Editor**, in filename order.
 3. Copy the URL, the publishable key and the secret key from **Settings → API** into `.env.local` (and into the Vercel environment variables).
 4. Under **Authentication → Providers → Email**, decide whether to require email confirmation: with it enabled, people get an email after signing up and sign in afterwards; without it, signing up opens a session directly.
-5. Under **Authentication → URL Configuration**, add the production URL and `http://localhost:3000` as *Redirect URLs*.
+5. Under **Authentication → URL Configuration**, set the **Site URL** to the production URL (e.g. `https://your-app.vercel.app`) and add both the production URL and `http://localhost:3000` as *Redirect URLs*. If the Site URL is left at `http://localhost:3000`, Supabase sends people back to localhost after signing in.
+6. Set `NEXT_PUBLIC_APP_URL` to the production URL (no trailing slash) in Vercel. It is only a fallback: the OAuth redirect and the post-login redirect use the host the person came from, so staging and production do not bounce into each other.
+7. **Staging:** add every environment's URL to *Redirect URLs* (`https://prod/auth/callback`, `https://staging/auth/callback`, `http://localhost:3000/auth/callback`). The Site URL is only used when the requested redirect is not in that list, so with the callback listed everywhere it does not matter which one is the Site URL. For real isolation, use a second Supabase project for staging and set the `NEXT_PUBLIC_SUPABASE_*` / `SUPABASE_SECRET_KEY` variables per Vercel environment (Production vs Preview).
 
 ### 4.3 Google sign-in (optional)
 
